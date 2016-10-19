@@ -9,17 +9,21 @@ source("http://www.stat.berkeley.edu/users/nolan/data/nodeDensity.R")
 
 ## Generating nods in an ad hoc network
 ```{r}
-genNodes = function(n) {
   x = seq(from = 0, to = 100, by = 0.5)
   y = seq(from = 0, to = 100, by = 0.5)
   # Create a grid from vectors
   gridPts = expand.grid(x, y)
   # Search over the grid for the maximum of the density
-  zMax = max(nodeDensity(gridPts[[1]], gridPts[[2]])) + 0.001
+  zMax = max(nodeDensity(gridPts[[1]], gridPts[[2]]))
+  
+```
+
+```{r}
+genNodes = function(n) {
   # Generate points in a 3-dimensional rectangle
   x1 = runif(100 * n, min = 0, max = 100)
   y1 = runif(100 * n, min = 0, max = 100)
-  z1 = runif(100 * n, min = 0, max = zMax)
+  z1 = runif(100 * n, min = 0, max = 4)
   # Keep the points	falling in the 3-d region beneath the density
   keep = z1 <= nodeDensity(x1, y1)
   x1 = x1[keep]
@@ -84,12 +88,7 @@ findRc = function(nodes, tol = 0.05) {
 ## Examining the distribution of Rc in 1000 simulations
 
 ```{r}
-RC = numeric(1000)
-for(i in 1:1000) {
-  nodes = genNodes(100)
-  RC[i] = findRc(nodes, tol = 0.001)
-}
-RC = data.frame(RC)
+RC = data.frame(replicate(1000, findRc(genNodes(100), tol = 0.001)))
 require(ggplot2)
 ggplot(data = RC) +
   geom_histogram(aes(x = RC, y = ..density..), fill = "white", col = "black") +
