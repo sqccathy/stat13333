@@ -1,0 +1,98 @@
+---
+title: "project"
+output: html_document
+---
+
+```{r}
+source("http://www.stat.berkeley.edu/users/nolan/data/nodeDensity.R")
+```
+
+## Generating nods in an ad hoc network
+```{r}
+genNodes = function(n) {
+  x = seq(from = 0, to = 100, by = 0.5)
+  y = seq(from = 0, to = 100, by = 0.5)
+  # Create a grid from vectors
+  gridPts = expand.grid(x, y)
+  # Search over the grid for the maximum of the density
+  zMax = max(nodeDensity(gridPts[[1]], gridPts[[2]])) + 0.001
+  # Generate points in a 3-dimensional rectangle
+  x1 = runif(100 * n, min = 0, max = 100)
+  y1 = runif(100 * n, min = 0, max = 100)
+  z1 = runif(100 * n, min = 0, max = zMax)
+  # Keep the points	falling in the 3-d region beneath the density
+  keep = z1 <= nodeDensity(x1, y1)
+  x1 = x1[keep]
+  y1 = y1[keep]
+  # Use the (x, y) coordinates of these ¡°kept¡± points as the sample	
+  random = sample(seq(0, length(x1)), n)
+  return(matrix(c(x1[random], y1[random]), ncol = 2))
+}
+```
+
+
+## Finding the smallest radius such that the network is completely connected
+```{r}
+# Find the range for Rc
+  findRange = function(mat) {
+    return(c(max(apply(mat, 1, function(x) min(x[x!=min(x)]))), min(apply(mat, 1, max))))
+  }
+```
+
+```{r}
+# Generate the transition matrix
+  findTranMat = function(mat, R) {
+    n = nrow(mat)
+    TranMat = matrix(rep(0, n ^ 2), nrow = n)
+    for(i in 1:n) {
+      connect = mat[i, ] <= R
+      connectNum = sum(connect)
+      TranMat[i, ][connect] = 1 / connectNum
+    }
+    return(TranMat)
+  }
+```
+
+```{r}
+# Get the second largest eigenvalue of a matrix
+getEigen2 = function(mat) {
+  require(RSpectra)
+  eigs(mat, 2)[[1]][2]
+}
+```
+
+```{r}
+findRc = function(nodes, tol = 0.05) {
+  distBNodes = as.matrix(dist(nodes))
+  range = findRange(distBNodes)
+  if(range[1] == range[2]) {
+    return(range[1])
+  } else {
+    n = ceiling(log2((max(range) - min(range)) / tol))
+    for(i in 1:n) {
+      Rc = sum(range) / 2
+      TranMat = findTranMat(distBNodes, Rc)
+      if(getEigen2(TranMat) != 1) {
+        range[2] = Rc
+      } else range[1] = Rc
+    }
+    return(Rc)
+  }
+}
+```
+
+## Examining the distribution of Rc in 1000 simulations
+
+```{r}
+RC = numeric(1000)
+for(i in 1:1000) {
+  nodes = genNodes(100)
+  RC[i] = findRc(nodes, tol = 0.001)
+}
+RC = data.frame(RC)
+require(ggplot2)
+ggplot(data = RC) +
+  geom_histogram(aes(x = RC, y = ..density..), fill = "white", col = "black") +
+  geom_density(aes(x = RC)) +
+  scale_x_continuous(name = "the smallest radius such that the network is connected")
+```
