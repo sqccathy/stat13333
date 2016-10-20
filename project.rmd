@@ -117,7 +117,14 @@ findRc = function(nodes, tol = 0.05) {
 ```
 
 ## Examining the distribution of Rc in 1000 simulations
-
+```{r}
+seeds = vector(length = 1000, mode = "list")
+Rc = numeric(1000)
+for (i in 1:1000){
+  Rc[i] = findRc(genNodes(100), tol = 0.001)
+  seeds[[i]] = .Random.seed
+}
+```
 ```{r}
 RC = data.frame(replicate(1000, findRc(genNodes(100), tol = 0.001)))
 require(ggplot2)
