@@ -133,3 +133,49 @@ ggplot(data = RC) +
   geom_density(aes(x = RC)) +
   scale_x_continuous(name = "the smallest radius such that the network is connected")
 ```
+
+```{r}
+
+nodesConnect = function(nodes, R) {
+  distBtwnNodes = as.matrix(dist(nodes))
+  n = nrow(nodes)
+  matGo = matrix(1:n, nrow = n, ncol = n, byrow = TRUE)
+  matGo[ distBtwnNodes > R] = 0
+  diag(matGo) = 0
+  matGo
+}
+
+```
+
+```{r}
+# Find the points between which the distances are less than or equal to the Rc found using the function findRc.
+
+M = genNodes(100)
+R = findRc(M)
+ConnectMat = nodesConnect(M, R)
+x = M[, 1]
+y = M[, 2]
+n = nrow(M)
+
+# Find the points which can be connected
+
+logical = as.logical(ConnectMat)
+logical = matrix(logical, nrow = n, ncol = n, byrow = TRUE) 
+repeatTimes = apply(logical, 1, sum)
+x1 = rep(x, repeatTimes)
+y1 = rep(y, repeatTimes)
+x2 = numeric()
+y2 = numeric()
+for(i in 1:n){
+x2 = c(x2, x[logical[i, ]])
+y2 = c(y2, y[logical[i, ]])
+}
+
+
+require(ggplot2)
+ggplot(data = data.frame(x1, y1), mapping = aes(x = x1, y = y1))+
+  geom_point()+
+  geom_segment(data = data.frame(x1, y1, x2, y2), mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
+
+
+```
