@@ -1,23 +1,30 @@
 ---
-title: "project"
+title: "Project: Ad Hoc Network Simulation"
 output: html_document
 ---
 
+Wireless networks are all around us. Traditionally, cell phones communicate with a base-station to send and receive calls. Now, a new idea of organizing networks is to avoid the need for a central base-station that coordinates communications. Instead, messages are relayed by "hopping" from one node to the next to the next until it reaches its destination. These are called ad hoc networks. A very basic aspect of ad hoc networks is how the communication and complete connectivity changes with respect to the broadcasting power.
+
+Therefore, this project will focus on this aspect. In specific, we would first use acceptance-rejection sampling to generate 1000 2-dimensional ad hoc networks consisting of n nodes based on a given density function, and find the smallest broadcasting power  for each network such that it is completely connected. Building further on that, we can look into the distribution of the value of broadcasting power. Last, we would change n, which is the number of nodes, and replicate the above process to find out how the number of nodes influences the required broadcasting power.
+
+First, we source the density function nodeDensity() into R. It takes two inputs: x and y, two numeric vectors of the same length. The function returns a numeric vector of values that are proportional to node density at the (x, y) pairs. 
 ```{r}
 source("http://www.stat.berkeley.edu/users/nolan/data/nodeDensity.R")
 ```
 
-## Generating nods in an ad hoc network
+## Generate nodes in an ad hoc network
+The next step is to generate nodes in an ad hoc network based on the density function. For this purpose, we apply the acceptance-rejection sampling. We want the	smallest rectangular region that encompasses the density function, thus we need to find the maximal value of the density function on its domain, which is the [0, 100] * [0, 100] plane. So we generate a grid on this plane, and search over it for the maximum of the density.
 ```{r}
+  # Here we take by = 0.5, which is small, to make sure that the grid is dense enough so that the error of the max of the density is small
   x = seq(from = 0, to = 100, by = 0.5)
   y = seq(from = 0, to = 100, by = 0.5)
-  # Create a grid from vectors
+  # Generate a grid from vectors x and y
   gridPts = expand.grid(x, y)
   # Search over the grid for the maximum of the density
   zMax = max(nodeDensity(gridPts[[1]], gridPts[[2]]))
-  
 ```
 
+After running the previous code chunk, we find that zMax = 3.983498. We take zMAX = 4 when generating ad hoc networks.
 ```{r}
 genNodes = function(n) {
   # Generate points in a 3-dimensional rectangle
@@ -28,21 +35,42 @@ genNodes = function(n) {
   keep = z1 <= nodeDensity(x1, y1)
   x1 = x1[keep]
   y1 = y1[keep]
-  # Use the (x, y) coordinates of these ¡°kept¡± points as the sample	
+  # Use the (x, y) coordinates of these "kept" points as the sample	
   random = sample(seq(0, length(x1)), n)
   return(matrix(c(x1[random], y1[random]), ncol = 2))
 }
 ```
 
+## Find the smallest radius Rc such that the network is completely connected
 
-## Finding the smallest radius such that the network is completely connected
+Note that here the radius R around every node actually denotes the broadcasting power levels.
+
+Since each node must be connected to at least one other node, then Rc must be at least as large as the greatest row-wise minimum (ignoring the diagonal element). Similarly, If Rc is greater than the maximum distance in a row, then the corresponding node will be connected to all of the other nodes, i.e., the network will be connected. So Rc is no greater than the smallest row-wise maximum.
+
+So we write a function, findRange() to find the range of Rc to search over based on the above observations. This function has one input: the distance matrix called mat. It is required. The function returns a numeric vector of length 2, with the minimum and maximum values of R to search over.
 ```{r}
-# Find the range for Rc
+# Find the range of Rc
   findRange = function(mat) {
-    return(c(max(apply(mat, 1, function(x) min(x[x!=min(x)]))), min(apply(mat, 1, max))))
+    return(c(max(apply(mat, 1, function(x) min(x[x!=min(x)]))), min(apply(mat, 1, max)))) 
   }
 ```
 
+Furthermore, to find the smallest radius Rc such that the network is completely connected for a given configuration of nodes, we can use the bisection method based on the range of Rc we just derived. However, for each value of Rc, we'll have to decide whether it works in the sense that it is large enough for the network to be completely connected. To do this, we introduce a new notion - transformation matrix. It can be generated according to the distance matrix of our nodes.
+
+Specifically, for a message located at node i, i = 1,...,n, the chance the message moves to node j is 0 if these two nodes are further than R away from each other. Otherwise, it is 1/ki where ki is the number of nodes within R of
+node i (including node i itself). The n times n matrix of these transition probabilities is called P, aka the transformation matrix.
+
+Now, if vm is a n Ã— 1 vector of probabilities that a message is at any one of the n nodes at one "instant", then Pvm = vm+1 is the distribution of locations of the message at the next instant. And Pvm+1 = vm+2 is the distribution for the next instant. 
+
+Mathematical properties of transition matrices tell us many things. Namely,
+1. the distribution of the locations of the message settles down, i.e., there is some v where Pv = v.
+2. This equation indicates that the steady state (i.e. v) is the eigenvector of the transition matrix associated with the eigenvalue of 1.
+3. The eigenvalues of P are all real and less than or equal to one.
+4. If the network of nodes is fully connected, then there is one unique steady-state solution. In this case, only the largest eigenvalue is one.
+
+The above properties imply that the size of the second largest eigenvalue of P is key to determining if the network is connected. 
+
+To sum up, in a bid to determine whether a particular R works, we need to write a helper function called findTranMat() to find the transition matrix based on a distance matrix and a value for R. That is, this function takes as an input a distance matrix called mat and a value for R, called R. Both of these are required arguments. The function returns the transition matrix P for these inputs.
 ```{r}
 # Generate the transition matrix
   findTranMat = function(mat, R) {
@@ -57,14 +85,17 @@ genNodes = function(n) {
   }
 ```
 
+According to the analysis before, the size of the second largest eigenvalue of P is key to determining if the network is connected. So we write anthoer helper function called getEigen2() which returns the second largest eigenvalue of a matrix. The input to this function has one argument, which is required. The parameter is a
+matrix, called mat.
 ```{r}
 # Get the second largest eigenvalue of a matrix
+require(RSpectra)
 getEigen2 = function(mat) {
-  require(RSpectra)
   eigs(mat, 2)[[1]][2]
 }
 ```
 
+With the helper functions, namely findRange(), findTranMat() and getEigen2(), we can finally establish the function called findRc(). The first input parameter is nodes, which is required. This input is a 2-column matrix of the x and y locations of the nodes. The second input parameter is tol. It has a default value of 0.05, which is the tolerance level for how close we need to get to the true value of Rc for the provided configuration. The return value is a numeric vector of length 1, that holds the value of Rc (or a value close to it).
 ```{r}
 findRc = function(nodes, tol = 0.05) {
   distBNodes = as.matrix(dist(nodes))
