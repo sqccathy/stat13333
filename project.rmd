@@ -124,9 +124,17 @@ for (i in 1:1000){
   Rc[i] = findRc(genNodes(100), tol = 0.001)
   seeds[[i]] = .Random.seed
 }
+repRc=numeric(3)
+.Random.seed = seeds[[which(Rc == min(Rc))-1]]
+repRc[1] = findRc(genNodes(100), tol = 0.001)
+.Random.seed = seeds[[which(Rc == max(Rc))-1]]
+repRc[2] = findRc(genNodes(100), tol = 0.001)
+.Random.seed = seeds[[which(Rc == median(Rc))-1]]
+repRc[3] = findRc(genNodes(100), tol = 0.001)
+
 ```
 ```{r}
-RC = data.frame(replicate(1000, findRc(genNodes(100), tol = 0.001)))
+
 require(ggplot2)
 ggplot(data = RC) +
   geom_histogram(aes(x = RC, y = ..density..), fill = "white", col = "black") +
