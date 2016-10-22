@@ -156,6 +156,7 @@ ggplot(data = RC2) +
 
 
 ```{r}
+#find the max,min,median,mean of Rc50 and reproduce it.
 SimTime = numeric(4)
 SimTime[1] = which(RC[, 1] == min(RC[, 1]))
 SimTime[2] = which(RC[, 1] == max(RC[, 1]))
