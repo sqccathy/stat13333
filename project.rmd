@@ -12,36 +12,36 @@ First, we source the density function nodeDensity() into R. It takes two inputs:
 source("http://www.stat.berkeley.edu/users/nolan/data/nodeDensity.R")
 ```
 
-## Generate nodes in an ad hoc network
+## Generating nodes in an ad hoc network
 The next step is to generate nodes in an ad hoc network based on the density function. For this purpose, we apply the acceptance-rejection sampling. We want the	smallest rectangular region that encompasses the density function, thus we need to find the maximal value of the density function on its domain, which is the [0, 100] * [0, 100] plane. So we generate a grid on this plane, and search over it for the maximum of the density.
 ```{r}
-  # Here we take by = 0.5, which is small, to make sure that the grid is dense enough so that the error of the max of the density is small
-  x = seq(from = 0, to = 100, by = 0.5)
-  y = seq(from = 0, to = 100, by = 0.5)
-  # Generate a grid from vectors x and y
-  gridPts = expand.grid(x, y)
-  # Search over the grid for the maximum of the density
-  zMax = max(nodeDensity(gridPts[[1]], gridPts[[2]]))
+# Here we take by = 0.5, which is small, to make sure that the grid is dense enough so that the error of the max of the density is small
+x = seq(from = 0, to = 100, by = 0.5)
+y = seq(from = 0, to = 100, by = 0.5)
+# Creating a grid from vectors x and y
+gridPts = expand.grid(x, y)
+# Searching over the grid for the maximum of the density
+zMax = max(nodeDensity(gridPts[[1]], gridPts[[2]]))
 ```
 
 After running the previous code chunk, we find that zMax = 3.983498. We take zMAX = 4 when generating ad hoc networks.
 ```{r}
 genNodes = function(n) {
-  # Generate points in a 3-dimensional rectangle
+  # Generating points in a 3-dimensional rectangle
   x1 = runif(100 * n, min = 0, max = 100)
   y1 = runif(100 * n, min = 0, max = 100)
   z1 = runif(100 * n, min = 0, max = 4)
-  # Keep the points	falling in the 3-d region beneath the density
+  # Keeping the points	falling in the 3-d region beneath the density
   keep = z1 <= nodeDensity(x1, y1)
   x1 = x1[keep]
   y1 = y1[keep]
-  # Use the (x, y) coordinates of these "kept" points as the sample	
+  # Using the (x, y) coordinates of these "kept" points as the sample	
   random = sample(seq(0, length(x1)), n)
   return(matrix(c(x1[random], y1[random]), ncol = 2))
 }
 ```
 
-## Find the smallest radius Rc such that the network is completely connected
+## Finding the smallest radius Rc such that the network is completely connected
 
 Note that here the radius R around every node actually denotes the broadcasting power levels.
 
@@ -49,7 +49,7 @@ Since each node must be connected to at least one other node, then Rc must be at
 
 So we write a function, findRange() to find the range of Rc to search over based on the above observations. This function has one input: the distance matrix called mat. It is required. The function returns a numeric vector of length 2, with the minimum and maximum values of R to search over.
 ```{r}
-# Find the range of Rc
+# Finding the range of Rc
   findRange = function(mat) {
     return(c(max(apply(mat, 1, function(x) min(x[x!=min(x)]))), min(apply(mat, 1, max)))) 
   }
@@ -72,7 +72,7 @@ The above properties imply that the size of the second largest eigenvalue of P i
 
 To sum up, in a bid to determine whether a particular R works, we need to write a helper function called findTranMat() to find the transition matrix based on a distance matrix and a value for R. That is, this function takes as an input a distance matrix called mat and a value for R, called R. Both of these are required arguments. The function returns the transition matrix P for these inputs.
 ```{r}
-# Generate the transition matrix
+# Generating the transition matrix
   findTranMat = function(mat, R) {
     n = nrow(mat)
     TranMat = matrix(rep(0, n ^ 2), nrow = n)
@@ -88,7 +88,7 @@ To sum up, in a bid to determine whether a particular R works, we need to write 
 According to the analysis before, the size of the second largest eigenvalue of P is key to determining if the network is connected. So we write anthoer helper function called getEigen2() which returns the second largest eigenvalue of a matrix. The input to this function has one argument, which is required. The parameter is a
 matrix, called mat.
 ```{r}
-# Get the second largest eigenvalue of a matrix
+# Getting the second largest eigenvalue of a matrix
 require(RSpectra)
 getEigen2 = function(mat) {
   eigs(mat, 2)[[1]][2]
@@ -107,55 +107,62 @@ findRc = function(nodes, tol = 0.05) {
     for(i in 1:n) {
       Rc = sum(range) / 2
       TranMat = findTranMat(distBNodes, Rc)
-      if(getEigen2(TranMat) != 1) {
-        range[2] = Rc
-      } else range[1] = Rc
+      if(isTRUE(all.equal(1, getEigen2(TranMat)))) {
+        range[1] = Rc
+      } else range[2] = Rc
     }
     return(Rc)
   }
 }
 ```
 
-## Examining the distribution of Rc in 1000 simulations
+## Examining the distribution of Rc in 1000 simulations for different numbers of nodes
+
+In a bid to probe into how the number of nodes influences the required broadcasting power, we choose different number of nodes, namely 50, 75, 100, 125, 150 and 175, and look at the distribution of Rc in 1000 simulations in each circumstance.
+
+Notice that to reproduce the simulation results, we use set.seed() to control the seed. We also give the seed used at the beginning of simulations.
 ```{r}
+# Setting the seeds for each simulation
 seeds = vector(length = 1000, mode = "list")
-Rc = numeric(1000)
-for (i in 1:1000){
-  Rc[i] = findRc(genNodes(100), tol = 0.001)
-  seeds[[i]] = .Random.seed
+RC = data.frame(Rc50 = rep(0, 1000), Rc75 = rep(0, 1000), Rc100 = rep(0, 1000), Rc125 = rep(0, 1000), Rc150 = rep(0, 1000), Rc175 = rep(0, 1000))
+
+# Finding Rc for different number of nodes, each with 1000 simulations
+numNodes = seq(from = 50, by = 25, length = 6)
+j = 1
+for(n in numNodes) {
+  set.seed(12345678)
+  for(i in 1:1000) {
+    seeds[[i]] = .Random.seed
+    RC[i, j] = findRc(genNodes(n))
+  }
+  j = j + 1
 }
-repRc=numeric(3)
-.Random.seed = seeds[[which(Rc == min(Rc))-1]]
-repRc[1] = findRc(genNodes(100), tol = 0.001)
-.Random.seed = seeds[[which(Rc == max(Rc))-1]]
-repRc[2] = findRc(genNodes(100), tol = 0.001)
-.Random.seed = seeds[[which(Rc == median(Rc))-1]]
-repRc[3] = findRc(genNodes(100), tol = 0.001)
-
 ```
-```{r}
 
+Now, we have a data frame RC with 6 vectors of length 1000. Each vector records the 1000 Rc values derived from 1000 simulations for a particular number of nodes.
+
+Next, we'll examine the distribution of these Rc values. To start with, we need to massage data into format suitable for analysis.
+```{r}
+# stacking Rc for different numbers of nodes
+RC2 = data.frame(Rc = with(RC, c(Rc50, Rc75, Rc100, Rc125, Rc150, Rc175)))
+# Creating a new variable "Type" in RC
+RC2$type = rep(c("Rc50", "Rc75", "Rc100", "Rc125", "Rc150", "Rc175"), each = 1000)
+# Plotting the distribution of Rc
 require(ggplot2)
-ggplot(data = RC) +
-  geom_histogram(aes(x = RC, y = ..density..), fill = "white", col = "black") +
-  geom_density(aes(x = RC)) +
+ggplot(data = RC2) +
+  geom_density(aes(x = Rc, color = type)) +
   scale_x_continuous(name = "the smallest radius such that the network is connected")
 ```
 
+## 上面跑出来挺好的~ 以下是还没做完的，明天再做啦啦啦啦
 ```{r}
-
-nodesConnect = function(nodes, R) {
-  distBtwnNodes = as.matrix(dist(nodes))
-  n = nrow(nodes)
-  matGo = matrix(1:n, nrow = n, ncol = n, byrow = TRUE)
-  matGo[ distBtwnNodes > R] = 0
-  diag(matGo) = 0
-  matGo
-}
-
-```
-
-```{r}
+repRc=numeric(3)
+.Random.seed = seeds[[which(Rc == min(Rc))]]
+repRc[1] = findRc(genNodes(100), tol = 0.001)
+.Random.seed = seeds[[which(Rc == max(Rc))]]
+repRc[2] = findRc(genNodes(100), tol = 0.001)
+.Random.seed = seeds[[which(Rc == median(Rc))]]
+repRc[3] = findRc(genNodes(100), tol = 0.001)
 ## Find the points between which the distances are less than or equal to the Rc found using the function findRc.
 
 M = genNodes(100)
@@ -167,7 +174,7 @@ n = nrow(M)
 
 ## Find the points which can be connected
 
-logical = as.logical(ConnectMat)
+logical = as.logical(findTranMat())
 logical = matrix(logical, nrow = n, ncol = n, byrow = TRUE) 
 repeatTimes = apply(logical, 1, sum)
 x1 = rep(x, repeatTimes)
@@ -175,15 +182,12 @@ y1 = rep(y, repeatTimes)
 x2 = numeric()
 y2 = numeric()
 for(i in 1:n){
-x2 = c(x2, x[logical[i, ]])
-y2 = c(y2, y[logical[i, ]])
+  x2 = c(x2, x[logical[i, ]])
+  y2 = c(y2, y[logical[i, ]])
 }
 
 ## Plot the network
-require(ggplot2)
-ggplot(data = data.frame(x1, y1), mapping = aes(x = x1, y = y1))+
-  geom_point()+
-  geom_segment(data = data.frame(x1, y1, x2, y2), mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
-
-
+ggplot(data = data.frame(x1, y1, x2, y2))+
+  geom_point(mapping = aes(x = x1, y = y1))+
+  geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
 ```
