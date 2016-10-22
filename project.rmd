@@ -120,19 +120,16 @@ findRc = function(nodes, tol = 0.05) {
 
 In a bid to probe into how the number of nodes influences the required broadcasting power, we choose different number of nodes, namely 50, 75, 100, 125, 150 and 175, and look at the distribution of Rc in 1000 simulations in each circumstance.
 
-Notice that to reproduce the simulation results, we use set.seed() to control the seed. We also give the seed used at the beginning of simulations.
+Notice that to reproduce the simulation results, we use set.seed() to control the seed.
 ```{r}
-# Setting the seeds for each simulation
-seeds = vector(length = 1000, mode = "list")
+# Finding Rc for different numbers of nodes, each with 1000 simulations
 RC = data.frame(Rc50 = rep(0, 1000), Rc75 = rep(0, 1000), Rc100 = rep(0, 1000), Rc125 = rep(0, 1000), Rc150 = rep(0, 1000), Rc175 = rep(0, 1000))
-
-# Finding Rc for different number of nodes, each with 1000 simulations
 numNodes = seq(from = 50, by = 25, length = 6)
 j = 1
 for(n in numNodes) {
+  # Setting the seed for each number of nodes
   set.seed(12345678)
   for(i in 1:1000) {
-    seeds[[i]] = .Random.seed
     RC[i, j] = findRc(genNodes(n))
   }
   j = j + 1
@@ -154,9 +151,17 @@ ggplot(data = RC2) +
   scale_x_continuous(name = "the smallest radius such that the network is connected")
 ```
 
-
+Next, we pick one n to study the node configuration in greater detail. This n should not be so large that plots would be hard to view. Thus we choose n = 50.
 ```{r}
-#find the max,min,median,mean of Rc50 and reproduce it.
+# Saving the seeds for RNG when n is 50
+seeds = vector(length = 1000, mode = "list")
+set.seed(12345678)
+for(i in 1:1000) {
+  seeds[[i]] = .Random.seed
+  findRc(genNodes(50))
+}
+
+# Finding the seed for four of 1000 node configurations corresponding roughly to the min, median, mean, and maximum values of Rc50
 SimTime = numeric(4)
 SimTime[1] = which(RC[, 1] == min(RC[, 1]))
 SimTime[2] = which(RC[, 1] == max(RC[, 1]))
@@ -164,15 +169,17 @@ diffmedian = abs(RC[, 1] - median(RC[, 1]))
 SimTime[3] = head(which(diffmedian == min(diffmedian)), 1)
 diffmean = abs(RC[,1] - mean(RC[,1]))
 SimTime[4] = head(which(diffmean == min(diffmean)), 1)
+```
 
-## Finding the points between which the distances are less than or equal to the Rc found using the function findRc.
+```{r}
+# Finding the points between which the distances are less than or equal to Rc.
 for(i in 1:4) {
   .Random.seed = seeds[[SimTime[i]]]
   nodes = genNodes(50)
   Rc = findRc(nodes)
   x = nodes[, 1]
   y = nodes[, 2]
-  # Finding the points which can be connected\
+  # Finding the points which can be connected
   distBNodes = as.matrix(dist(nodes))
   logical = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
   repeatTimes = apply(logical, 1, sum)
@@ -184,7 +191,7 @@ for(i in 1:4) {
     x2 = c(x2, x[logical[j, ]])
     y2 = c(y2, y[logical[j, ]])
   }
-  # Plot the network
+  # Plotting the network
   ggplot(data = data.frame(x1, y1, x2, y2)) +
     geom_point(mapping = aes(x = x1, y = y1)) +
     geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
