@@ -122,9 +122,12 @@ In a bid to probe into how the number of nodes influences the required broadcast
 
 Notice that to reproduce the simulation results, we use set.seed() to control the seed.
 ```{r}
-# Finding Rc for different numbers of nodes, each with 1000 simulations
+# Finding Rc for different numbers of nodes, each with 1000 simulations and placing them in a data frame with 1000 rows and 6 columns
 RC = data.frame(Rc50 = rep(0, 1000), Rc75 = rep(0, 1000), Rc100 = rep(0, 1000), Rc125 = rep(0, 1000), Rc150 = rep(0, 1000), Rc175 = rep(0, 1000))
+
+# Numbers of nodes are chosen as 50, 75, 100, 125, 150 and 175
 numNodes = seq(from = 50, by = 25, length = 6)
+
 j = 1
 for(n in numNodes) {
   # Setting the seed for each number of nodes
@@ -144,12 +147,19 @@ Next, we'll examine the distribution of these Rc values. To start with, we need 
 RC2 = data.frame(Rc = with(RC, c(Rc50, Rc75, Rc100, Rc125, Rc150, Rc175)))
 # Creating a new variable "Type" in RC
 RC2$type = rep(c("Rc50", "Rc75", "Rc100", "Rc125", "Rc150", "Rc175"), each = 1000)
+```
+
+Then we can make graphs to explore the distribution of Rc for different numbers   of nodes. Since there is one quantitative variable, we use superposed density curves for comparison.
+```{r}
 # Plotting the distribution of Rc
 require(ggplot2)
 ggplot(data = RC2) +
   geom_density(aes(x = Rc, color = type)) +
   scale_x_continuous(name = "the smallest radius such that the network is connected")
 ```
+From the plot, we can see that 
+(i) For each n, the distribution of Rc is right-skewed with a long right tail and a single mode.
+(ii) As n becomes larger, the density curve is more shifted to the left. In the meanwhile, it also appears that the spread in Rc is smaller and that the distribution of Rc has shorter tails.
 
 Next, we pick one n to study the node configuration in greater detail. This n should not be so large that plots would be hard to view. Thus we choose n = 50.
 ```{r}
@@ -161,7 +171,7 @@ for(i in 1:1000) {
   findRc(genNodes(50))
 }
 
-# Finding the seed for four of 1000 node configurations corresponding roughly to the min, median, mean, and maximum values of Rc50
+# Finding the seed for four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50
 SimTime = numeric(4)
 SimTime[1] = which(RC[, 1] == min(RC[, 1]))
 SimTime[2] = which(RC[, 1] == max(RC[, 1]))
@@ -171,6 +181,7 @@ diffmean = abs(RC[,1] - mean(RC[,1]))
 SimTime[4] = head(which(diffmean == min(diffmean)), 1)
 ```
 
+Now that we have the seeds we need, we can then plot the network of connected points for four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50.
 ```{r}
 # Finding the points between which the distances are less than or equal to Rc.
 for(i in 1:4) {
