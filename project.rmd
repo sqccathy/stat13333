@@ -75,8 +75,8 @@ To sum up, in a bid to determine whether a particular R works, we need to write 
 # Generating the transition matrix
   findTranMat = function(mat, R) {
     n = nrow(mat)
-    TranMat = matrix(rep(0, n ^ 2), nrow = n)
-    for(i in 1:n) {
+    TranMat = matrix(0, nrow = n, ncol = n)
+    for(i in 1:n) { 
       connect = mat[i, ] <= R
       connectNum = sum(connect)
       TranMat[i, ][connect] = 1 / connectNum
@@ -154,40 +154,38 @@ ggplot(data = RC2) +
   scale_x_continuous(name = "the smallest radius such that the network is connected")
 ```
 
-## 上面跑出来挺好的~ 以下是还没做完的，明天再做啦啦啦啦
+
 ```{r}
-repRc=numeric(3)
-.Random.seed = seeds[[which(Rc == min(Rc))]]
-repRc[1] = findRc(genNodes(100), tol = 0.001)
-.Random.seed = seeds[[which(Rc == max(Rc))]]
-repRc[2] = findRc(genNodes(100), tol = 0.001)
-.Random.seed = seeds[[which(Rc == median(Rc))]]
-repRc[3] = findRc(genNodes(100), tol = 0.001)
-## Find the points between which the distances are less than or equal to the Rc found using the function findRc.
+SimTime = numeric(4)
+SimTime[1] = which(RC[, 1] == min(RC[, 1]))
+SimTime[2] = which(RC[, 1] == max(RC[, 1]))
+diffmedian = abs(RC[, 1] - median(RC[, 1]))
+SimTime[3] = head(which(diffmedian == min(diffmedian)), 1)
+diffmean = abs(RC[,1] - mean(RC[,1]))
+SimTime[4] = head(which(diffmean == min(diffmean)), 1)
 
-M = genNodes(100)
-R = findRc(M)
-ConnectMat = nodesConnect(M, R)
-x = M[, 1]
-y = M[, 2]
-n = nrow(M)
-
-## Find the points which can be connected
-
-logical = as.logical(findTranMat())
-logical = matrix(logical, nrow = n, ncol = n, byrow = TRUE) 
-repeatTimes = apply(logical, 1, sum)
-x1 = rep(x, repeatTimes)
-y1 = rep(y, repeatTimes)
-x2 = numeric()
-y2 = numeric()
-for(i in 1:n){
-  x2 = c(x2, x[logical[i, ]])
-  y2 = c(y2, y[logical[i, ]])
+## Finding the points between which the distances are less than or equal to the Rc found using the function findRc.
+for(i in 1:4) {
+  .Random.seed = seeds[[SimTime[i]]]
+  nodes = genNodes(50)
+  Rc = findRc(nodes)
+  x = nodes[, 1]
+  y = nodes[, 2]
+  # Finding the points which can be connected\
+  distBNodes = as.matrix(dist(nodes))
+  logical = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
+  repeatTimes = apply(logical, 1, sum)
+  x1 = rep(x, repeatTimes)
+  y1 = rep(y, repeatTimes)
+  x2 = numeric()
+  y2 = numeric()
+  for(j in 1:50){
+    x2 = c(x2, x[logical[j, ]])
+    y2 = c(y2, y[logical[j, ]])
+  }
+  # Plot the network
+  ggplot(data = data.frame(x1, y1, x2, y2)) +
+    geom_point(mapping = aes(x = x1, y = y1)) +
+    geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
 }
-
-## Plot the network
-ggplot(data = data.frame(x1, y1, x2, y2))+
-  geom_point(mapping = aes(x = x1, y = y1))+
-  geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
 ```
