@@ -182,17 +182,21 @@ SimTime[4] = head(which(diffmean == min(diffmean)), 1)
 ```
 
 Now that we have the seeds we need, we can then plot the network of connected points for four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50.
+
 ```{r}
-# Finding the points between which the distances are less than or equal to Rc.
-for(i in 1:4) {
-  .Random.seed = seeds[[SimTime[i]]]
+# Creating a helper function for plotting.
+plotNetwork = function(){
   nodes = genNodes(50)
   Rc = findRc(nodes)
   x = nodes[, 1]
   y = nodes[, 2]
-  # Finding the points which can be connected
-  distBNodes = as.matrix(dist(nodes))
+  
+  # Transfering the transition matrix to a logical matrix.
+  distBNodes = as.matrix(dist(nodes)) 
   logical = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
+
+  # Applying the sum function across the columns to find how many times each point will be connected with other ones.   
+  # Creating a data frame that contains the x-axis and y-axis of the points and those of the corresponding points.  
   repeatTimes = apply(logical, 1, sum)
   x1 = rep(x, repeatTimes)
   y1 = rep(y, repeatTimes)
@@ -202,9 +206,34 @@ for(i in 1:4) {
     x2 = c(x2, x[logical[j, ]])
     y2 = c(y2, y[logical[j, ]])
   }
-  # Plotting the network
-  ggplot(data = data.frame(x1, y1, x2, y2)) +
+  df = data.frame(x1, y1, x2, y2)
+  
+  # Plotting the network.
+  ggplot(data = df) +
     geom_point(mapping = aes(x = x1, y = y1)) +
-    geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))
+    geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))+
+    scale_x_continuous(name = "x-axis")+
+    scale_y_continuous(name = "y-axis")
+  
 }
+```
+
+
+```{r}
+# For the min 
+.Random.seed = seeds[[SimTime[1]]]
+plotNetwork()
+
+# For the max 
+.Random.seed = seeds[[SimTime[2]]]
+plotNetwork()
+
+# For the median
+.Random.seed = seeds[[SimTime[3]]]
+plotNetwork()
+
+# For the mean
+.Random.seed = seeds[[SimTime[4]]]
+plotNetwork()
+
 ```
