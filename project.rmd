@@ -45,7 +45,7 @@ genNodes = function(n) {
 
 Note that here the radius R around every node actually denotes the broadcasting power levels.
 
-Since each node must be connected to at least one other node, then Rc must be at least as large as the greatest row-wise minimum (ignoring the diagonal element). Similarly, If Rc is greater than the maximum distance in a row, then the corresponding node will be connected to all of the other nodes, i.e., the network will be connected. So Rc is no greater than the smallest row-wise maximum.
+Since each node must be connected to at least one other node, then Rc must be at least as large as the greatest row-wise minimum (ignoring the diagonal element). Similarly, if Rc is greater than the maximum distance in a row, then the corresponding node will be connected to all of the other nodes, i.e., the network will be connected. So Rc is no greater than the smallest row-wise maximum.
 
 So we write a function, findRange() to find the range of Rc to search over based on the above observations. This function has one input: the distance matrix called mat. It is required. The function returns a numeric vector of length 2, with the minimum and maximum values of R to search over.
 ```{r}
@@ -55,10 +55,10 @@ So we write a function, findRange() to find the range of Rc to search over based
   }
 ```
 
-Furthermore, to find the smallest radius Rc such that the network is completely connected for a given configuration of nodes, we can use the bisection method based on the range of Rc we just derived. However, for each value of Rc, we'll have to decide whether it works in the sense that it is large enough for the network to be completely connected. To do this, we introduce a new notion - transformation matrix. It can be generated according to the distance matrix of our nodes.
+Furthermore, to find the smallest radius Rc such that the network is completely connected for a given configuration of nodes, we can use the bisection method based on the range of Rc we just derived. However, for each value of Rc, we'll have to decide whether it works in the sense that it is large enough for the network to be completely connected. To do this, we introduce a new notion - transition matrix. It can be generated according to the distance matrix of our nodes.
 
 Specifically, for a message located at node i, i = 1,...,n, the chance the message moves to node j is 0 if these two nodes are further than R away from each other. Otherwise, it is 1/ki where ki is the number of nodes within R of
-node i (including node i itself). The n times n matrix of these transition probabilities is called P, aka the transformation matrix.
+node i (including node i itself). The n times n matrix of these transition probabilities is called P, aka the transition matrix.
 
 Now, if vm is a n × 1 vector of probabilities that a message is at any one of the n nodes at one "instant", then Pvm = vm+1 is the distribution of locations of the message at the next instant. And Pvm+1 = vm+2 is the distribution for the next instant. 
 
@@ -142,8 +142,9 @@ Now, we have a data frame RC with 6 vectors of length 1000. Each vector records 
 
 Next, we'll examine the distribution of these Rc values. To start with, we need to massage data into format suitable for analysis.
 ```{r}
-# stacking Rc for different numbers of nodes
+# Stacking Rc for different numbers of nodes
 RC2 = data.frame(Rc = with(RC, c(Rc50, Rc75, Rc100, Rc125, Rc150, Rc175)))
+
 # Creating a new variable "Type" in RC
 RC2$type = rep(c("Rc50", "Rc75", "Rc100", "Rc125", "Rc150", "Rc175"), each = 1000)
 ```
