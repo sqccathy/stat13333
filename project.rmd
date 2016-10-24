@@ -89,9 +89,8 @@ According to the analysis before, the size of the second largest eigenvalue of P
 matrix, called mat.
 ```{r}
 # Getting the second largest eigenvalue of a matrix
-require(RSpectra)
 getEigen2 = function(mat) {
-  eigs(mat, 2)[[1]][2]
+  eigen(mat)[[1]][2]
 }
 ```
 
@@ -111,7 +110,7 @@ findRc = function(nodes, tol = 0.05) {
         range[1] = Rc
       } else range[2] = Rc
     }
-    return(Rc)
+    return(range[2])
   }
 }
 ```
@@ -157,83 +156,73 @@ ggplot(data = RC2) +
   geom_density(aes(x = Rc, color = type)) +
   scale_x_continuous(name = "the smallest radius such that the network is connected")
 ```
+
 From the plot, we can see that 
 (i) For each n, the distribution of Rc is right-skewed with a long right tail and a single mode.
 (ii) As n becomes larger, the density curve is more shifted to the left. In the meanwhile, it also appears that the spread in Rc is smaller and that the distribution of Rc has shorter tails.
 
 Next, we pick one n to study the node configuration in greater detail. This n should not be so large that plots would be hard to view. Thus we choose n = 50.
+Note that it's actually more efficient space wise to save the 1000 sets of nodes themselves than the 1000 random seeds that generated the nodes. We'll go for the first approach.
 ```{r}
-# Saving the seeds for RNG when n is 50
-seeds = vector(length = 1000, mode = "list")
+# Saving the 1000 sets of nodes when n is 50
+nodes = vector(length = 1000, mode = "list")
 set.seed(12345678)
-for(i in 1:1000) {
-  seeds[[i]] = .Random.seed
-  findRc(genNodes(50))
-}
+for(i in 1:1000)  nodes[[i]] = genNodes(50)
 
-# Finding the seed for four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50
-SimTime = numeric(4)
-SimTime[1] = which(RC[, 1] == min(RC[, 1]))
-SimTime[2] = which(RC[, 1] == max(RC[, 1]))
+# Finding four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50
+nodes_min = nodes[[which(RC[, 1] == min(RC[, 1]))]]
+nodes_max = nodes[[which(RC[, 1] == max(RC[, 1]))]]
 diffmedian = abs(RC[, 1] - median(RC[, 1]))
-SimTime[3] = head(which(diffmedian == min(diffmedian)), 1)
+nodes_median = nodes[[head(which(diffmedian == min(diffmedian)), 1)]]
 diffmean = abs(RC[,1] - mean(RC[,1]))
-SimTime[4] = head(which(diffmean == min(diffmean)), 1)
+nodes_mean = nodes[[head(which(diffmean == min(diffmean)), 1)]]
 ```
 
-Now that we have the seeds we need, we can then plot the network of connected points for four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50.
-
+Now we can then plot the network of connected points for four of 1000 node configurations corresponding roughly to the min, max, median and mean values of Rc50.
 ```{r}
-# Creating a helper function for plotting.
-plotNetwork = function(){
-  nodes = genNodes(50)
-  Rc = findRc(nodes)
-  x = nodes[, 1]
-  y = nodes[, 2]
+# Plotting the network
+plotNetwork = function(nodes) {
+  Rc = RC[n, 1]
+  x = Nodes[, 1]
+  y = Nodes[, 2]
   
-  # Transfering the transition matrix to a logical matrix.
-  distBNodes = as.matrix(dist(nodes)) 
-  logical = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
-
-  # Applying the sum function across the columns to find how many times each point will be connected with other ones.   
-  # Creating a data frame that contains the x-axis and y-axis of the points and those of the corresponding points.  
-  repeatTimes = apply(logical, 1, sum)
+  # Transferring the transition matrix to a logical matrix
+  distBNodes = as.matrix(dist(Nodes)) 
+  connect = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
+  
+  # Calculating the number of nodes within Rc of each node(including itself), i.e., the number of nodes that each node can be connceted to
+  repeatTimes = apply(connect, 1, sum)
+  
+  # Creating a data frame that contains the x-coordinate and y-coordinate of both the starting and end points of the segments
   x1 = rep(x, repeatTimes)
   y1 = rep(y, repeatTimes)
   x2 = numeric()
   y2 = numeric()
   for(j in 1:50){
-    x2 = c(x2, x[logical[j, ]])
-    y2 = c(y2, y[logical[j, ]])
+    x2 = c(x2, x[connect[j, ]])
+    y2 = c(y2, y[connect[j, ]])
   }
   df = data.frame(x1, y1, x2, y2)
   
   # Plotting the network.
   ggplot(data = df) +
     geom_point(mapping = aes(x = x1, y = y1)) +
-    geom_segment(mapping = aes(x = x1, y =y1, xend = x2, yend = y2))+
-    scale_x_continuous(name = "x-axis")+
+    geom_segment(mapping = aes(x = x1, y = y1, xend = x2, yend = y2)) +
+    scale_x_continuous(name = "x-axis") +
     scale_y_continuous(name = "y-axis")
-  
 }
 ```
 
-
 ```{r}
 # For the min 
-.Random.seed = seeds[[SimTime[1]]]
-plotNetwork()
+plotNetwork(nodes_min)
 
-# For the max 
-.Random.seed = seeds[[SimTime[2]]]
-plotNetwork()
+# For the max
+plotNetwork(nodes_max)
 
 # For the median
-.Random.seed = seeds[[SimTime[3]]]
-plotNetwork()
+plotNetwork(nodes_median)
 
 # For the mean
-.Random.seed = seeds[[SimTime[4]]]
-plotNetwork()
-
+plotNetwork(nodes_mean)
 ```
