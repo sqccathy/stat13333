@@ -218,6 +218,7 @@ plotNetwork = function(nodes) {
 ```
 
 ```{r}
+par(mfrow = c(2, 2))
 # For the min 
 plotNetwork(nodes_min)
 
