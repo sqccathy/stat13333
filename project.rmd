@@ -182,12 +182,12 @@ Now we can then plot the network of connected points for four of 1000 node confi
 ```{r}
 # Plotting the network
 plotNetwork = function(nodes) {
-  Rc = RC[n, 1]
-  x = Nodes[, 1]
-  y = Nodes[, 2]
+  Rc = findRc(nodes)
+  x = nodes[, 1]
+  y = nodes[, 2]
   
   # Transferring the transition matrix to a logical matrix
-  distBNodes = as.matrix(dist(Nodes)) 
+  distBNodes = as.matrix(dist(nodes)) 
   connect = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
   
   # Calculating the number of nodes within Rc of each node(including itself), i.e., the number of nodes that each node can be connceted to
