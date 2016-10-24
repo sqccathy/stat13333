@@ -190,15 +190,18 @@ plotNetwork = function(nodes) {
   distBNodes = as.matrix(dist(nodes)) 
   connect = matrix(as.logical(findTranMat(distBNodes, Rc)), nrow = 50, ncol = 50)
   
+  # Making the lower triangle(including diagonal entries) of the matrix connect FALSE, to avoid two-way connecting and self-connecting
+  connect[lower.tri(connect, diag = TRUE)] = FALSE
+  
   # Calculating the number of nodes within Rc of each node(including itself), i.e., the number of nodes that each node can be connceted to
-  repeatTimes = apply(connect, 1, sum)
+  repeatTimes = apply(connect, 1, sum) 
   
   # Creating a data frame that contains the x-coordinate and y-coordinate of both the starting and end points of the segments
   x1 = rep(x, repeatTimes)
   y1 = rep(y, repeatTimes)
   x2 = numeric()
   y2 = numeric()
-  for(j in 1:50){
+  for(j in 1:50) {
     x2 = c(x2, x[connect[j, ]])
     y2 = c(y2, y[connect[j, ]])
   }
@@ -206,8 +209,8 @@ plotNetwork = function(nodes) {
   
   # Plotting the network.
   ggplot(data = df) +
-    geom_point(mapping = aes(x = x1, y = y1)) +
-    geom_segment(mapping = aes(x = x1, y = y1, xend = x2, yend = y2)) +
+    geom_segment(aes(x = x1, y = y1, xend = x2, yend = y2), color = "green") +
+    geom_point(aes(x = x1, y = y1)) +
     scale_x_continuous(name = "x-axis") +
     scale_y_continuous(name = "y-axis")
 }
