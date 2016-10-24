@@ -89,8 +89,9 @@ According to the analysis before, the size of the second largest eigenvalue of P
 matrix, called mat.
 ```{r}
 # Getting the second largest eigenvalue of a matrix
+require(RSpectra)
 getEigen2 = function(mat) {
-  eigen(mat)[[1]][2]
+  eigs(mat, 2)[[1]][2]
 }
 ```
 
