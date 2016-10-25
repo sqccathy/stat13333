@@ -89,9 +89,8 @@ According to the analysis before, the size of the second largest eigenvalue of P
 matrix, called mat.
 ```{r}
 # Getting the second largest eigenvalue of a matrix
-require(RSpectra)
 getEigen2 = function(mat) {
-  eigs(mat, 2)[[1]][2]
+  eigen(mat)[[1]][2]
 }
 ```
 
@@ -219,7 +218,6 @@ plotNetwork = function(nodes) {
 ```
 
 ```{r}
-par(mfrow = c(2, 2))
 # For the min 
 plotNetwork(nodes_min)
 
@@ -232,3 +230,8 @@ plotNetwork(nodes_median)
 # For the mean
 plotNetwork(nodes_mean)
 ```
+Apparently there are more segments in the network of nodes_max than others, because Rc is the maximum and therefore the distances between points are more likely to be less than Rc. We can see from the plot that in our case, one outlier near (0,0) is the reason that Rc has to be large enough to connect it with others. Vise versa, the plot of minimun Rc has the fewest segments. 
+
+For any particular point in one plot, Rc is small only if the point has close neighbors. As long as one point is far away from others, Rc has to increase to connect it. 
+
+As the example given at the beginning, if every person is close to others, broadcasting power can be weak. If one person is distant from others, broadcasting power has to increase to allow him to communicate with others.
